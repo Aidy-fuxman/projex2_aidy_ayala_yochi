@@ -1,29 +1,31 @@
-
 import { useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";//השלמה של הcss עבור ספריית leaflet
+import "leaflet/dist/leaflet.css";
 import './form.css';
+import { useForm } from "react-hook-form";
 
-function ChangeView({ center }) {//קבלת מערך עם שני נקודות
-    const map = useMap(); // קבלת אובייקט המפה
-    map.setView(center); // תצוגה של המפה לפי הנקודות
+function ChangeView({ center }) {
+    const map = useMap();
+    map.setView(center);
     return null;
 }
+
 function Form() {
-    const [searchValue, setSearchValue] = useState("");//משתנה בסטייט עבור שדה הקלט
-    const [results, setResults] = useState([]); // אחסון התוצאות שחוזרות מהקריאה לשרת 
-    const [showResults, setShowResults] = useState(false); // הצגת/הסתרת תוצאות עבור הכפתורים
-    const [showMap, setShowMap] = useState(null); // -מערך קואורדינטות למפה
+    const [searchValue, setSearchValue] = useState("");
+    const [results, setResults] = useState([]);
+    const [showResults, setShowResults] = useState(false);
+    const [showMap, setShowMap] = useState(null);
+    const { register, handleSubmit, reset } = useForm();
 
     const Autocomplete = (e) => {
-        const search = e.target.value;//קבלת ערך החיפוש
-        setSearchValue(search);//עריכה של שדה הקלט
-        if (search === "") {//באם השדה ריק מערך ריק של תוצאות ועדכון שאין מה להציג
+        const search = e.target.value;
+        setSearchValue(search);
+        if (search === "") {
             setResults([]);
             setShowResults(false);
             return;
         }
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(search )}&limit=5`)//קריאה לשרת עם המפתח ומס הצגות
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(search)}&limit=5`)
             .then((res) => {
                 if (!res.ok) {
                     throw new Error("Network response was not ok");
@@ -31,52 +33,65 @@ function Form() {
                 return res.json();
             })
             .then((data) => {
-                setResults(data); // עדכון התוצאות
-                setShowResults(true);//ויש מה להציג
+                setResults(data);
+                setShowResults(true);
             })
             .catch((err) => {
                 console.error("Error fetching data:", err);
             });
     };
 
-    const OpenStreetMap = (lat, lon) => {//פונקציה שמקבלת כל פעם את שני ההקואורדינטות
-        setShowMap([lat, lon]); //עורכים את המשתנה של תצוגת המפה
+    const OpenStreetMap = (lat, lon) => {
+        setShowMap([lat, lon]);
+    };
+
+    const save = (data) => {
+        console.log("Form Data:", data);
+        alert("Data saved successfully:\n" + JSON.stringify(data, null, 2));
+        reset(); // איפוס הטופס לאחר שמירת הנתונים
+       
     };
 
     return (
-        <div>
-            <label>Enter name</label> <input type="text" name="name" />
+        <form onSubmit={handleSubmit(save)}>
+            <label>Enter name</label>
+            <input type="text" name="name" {...register("name")} />
+
             <label>Enter address to search</label>
             <input
+                {...register("address")}
                 type="text"
                 name="address"
-                onChange={Autocomplete}//בעת שינוי הכתובת נשלח לפונקציית שמציגה את הנתונים
+                onChange={Autocomplete}
                 value={searchValue}
             />
-            {showResults && (//דיב שבו מציגים את כל תוצאות החיפוש באם חזר משהו 
+
+            {showResults && (
                 <div id="results">
-                    {results.map((result, index) => (//מעבר בלולאה ויצירה של כפתור עם הכתובת האפשרית
+                    {results.map((result, index) => (
                         <button
                             key={index}
-                            onClick={() => {//שני עדכונים בעת לחיצה על כפתור מסוים
-                                setSearchValue(result.display_name); //  בשדה הקלט עדכון השם שנבחר
-                                OpenStreetMap(result.lat, result.lon); //מציגים את המפה לפי שני הנקודות
-                            }}>
-                                
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setSearchValue(result.display_name);
+                                OpenStreetMap(result.lat, result.lon);
+                            }}
+                        >
                             {result.display_name}
                         </button>
                     ))}
                 </div>
             )}
 
-            {showMap && Array.isArray(showMap) && (//דיב נוסף להצגת המפה
+            {showMap && Array.isArray(showMap) && (
                 <MapContainer
                     id="map"
-                    center={showMap}//מערך עם הקוארדינטות
+                    center={showMap}
                     zoom={13}
                     scrollWheelZoom={false}
-                    style={{ height: "400px", width: "100%" }}>
-                         {/* // שליחה לפונקציית הצגה כל פעם בעת שינוי */}
+                    style={{ height: "400px", width: "100%" }}
+                >
                     <ChangeView center={showMap} />
                     <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -89,51 +104,26 @@ function Form() {
                     </Marker>
                 </MapContainer>
             )}
+
             <label>Enter phone</label>
-            <input type="text" name="phone" />
+            <input type="text" name="phone" {...register("phone")} />
             <label>Enter email</label>
-            <input type="email" name="email" />
+            <input type="email" name="email" {...register("email")} />
             <label>Needed wifi</label>
-            <input type="checkbox" name="wifi" />
+            <input type="checkbox" name="wifi" {...register("wifi")} />
             <label>Needed kitchen</label>
-            <input type="checkbox" name="kitchen" />
+            <input type="checkbox" name="kitchen" {...register("kitchen")} />
             <label>Needed coffee machine</label>
-            <input type="checkbox" name="coffee" />
+            <input type="checkbox" name="coffee" {...register("coffee")} />
             <label>Number of rooms</label>
-            <input type="number" name="rooms" />
+            <input type="number" name="rooms" {...register("rooms")} />
             <label>Distance won't move</label>
-            <input type="number" name="distance" />
+            <input type="number" name="distance" {...register("distance")} />
             <input type="hidden" name="status" value={"searchStatus"} />
-        </div>
+            <br />
+            <input type="submit" />
+        </form>
     );
+}
 
-                        }
 export default Form;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
